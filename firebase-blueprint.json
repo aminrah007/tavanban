@@ -1,0 +1,809 @@
+{
+  "entities": {
+    "AdminMarker": {
+      "title": "AdminMarker",
+      "description": "Explicit administrator privilege document keyed by Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "OrgMember": {
+      "title": "OrgMember",
+      "description": "Google-authenticated organizational member binding to a TavanBan operational role.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "assignedRole": {
+          "type": "string",
+          "enum": [
+            "DEPUTY",
+            "EMPLOYER_MANAGER",
+            "EMPLOYER_CEO",
+            "EMPLOYER_EXPERT",
+            "CONTRACTOR_CEO",
+            "RESIDENT_REP",
+            "GROUP_SUPERVISOR",
+            "TECHNICIAN"
+          ]
+        },
+        "personnelId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["uid", "email", "assignedRole", "isActive", "createdAt", "updatedAt"]
+    },
+    "PersonnelProfile": {
+      "title": "PersonnelProfile",
+      "description": "Organizational personnel directory record with role, unit/company scope, and masked contact.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "encryptedMobile": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "DEPUTY",
+            "EMPLOYER_MANAGER",
+            "EMPLOYER_CEO",
+            "EMPLOYER_EXPERT",
+            "CONTRACTOR_CEO",
+            "RESIDENT_REP",
+            "GROUP_SUPERVISOR",
+            "TECHNICIAN"
+          ]
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "companyId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "unitId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "groupIds": {
+          "type": "array"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "score": {
+          "type": "number"
+        },
+        "loginCount": {
+          "type": "number"
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "fullName", "encryptedMobile", "role", "organizationId", "isActive", "loginCount", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "PersonnelPrivateContact": {
+      "title": "PersonnelPrivateContact",
+      "description": "Strictly isolated PII contact record for OTP verification and administrative management.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "mobile": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "hashedMobile": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "mobile", "hashedMobile", "ownerUid", "updatedAt"]
+    },
+    "WorkReport": {
+      "title": "WorkReport",
+      "description": "Field operation report or daily supervisor report with snapshot items and workflow events.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "reportType": {
+          "type": "string",
+          "enum": ["work_report", "daily_report"]
+        },
+        "userId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "userName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "companyId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "contractId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "submitted",
+            "supervisor_review",
+            "expert_review",
+            "employer_ceo_review",
+            "approved",
+            "rejected",
+            "redo_requested",
+            "disputed",
+            "settled"
+          ]
+        },
+        "totalAmount": {
+          "type": "number"
+        },
+        "itemCount": {
+          "type": "number"
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "reportType", "userId", "userName", "companyId", "contractId", "status", "totalAmount", "itemCount", "organizationId", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "TaskItem": {
+      "title": "TaskItem",
+      "description": "Operational task or mission dispatched to employer or contractor staff.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 240
+        },
+        "createdByUserId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "in_progress", "done", "cancelled"]
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "urgent"]
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "title", "createdByUserId", "status", "priority", "organizationId", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "Statement": {
+      "title": "Statement",
+      "description": "Financial contractor statement moving through 4-stage approval.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "amount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "employer_ceo_review",
+            "employer_manager_review",
+            "deputy_review",
+            "approved",
+            "rejected",
+            "paid",
+            "pending"
+          ]
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "title", "code", "amount", "status", "organizationId", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "PurchaseRequest": {
+      "title": "PurchaseRequest",
+      "description": "Material procurement request tied to contractor company/group.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "amount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected", "paid", "cancelled"]
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "title", "amount", "status", "organizationId", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "PriceItem": {
+      "title": "PriceItem",
+      "description": "Approved tariff / price schedule line item.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "unit": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "unitPrice": {
+          "type": "number"
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "code", "title", "unit", "unitPrice", "organizationId", "ownerUid", "isActive", "createdAt", "updatedAt"]
+    },
+    "WorkGroup": {
+      "title": "WorkGroup",
+      "description": "Operational maintenance work group.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "specialty": {
+          "type": "string",
+          "enum": ["telecom", "telemetry", "scada", "general"]
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "name", "organizationId", "ownerUid", "isActive", "createdAt", "updatedAt"]
+    },
+    "Contract": {
+      "title": "Contract",
+      "description": "Regional electric maintenance contract.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "contractNumber": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "title", "contractNumber", "organizationId", "ownerUid", "isActive", "createdAt", "updatedAt"]
+    },
+    "Company": {
+      "title": "Company",
+      "description": "Contractor company entity.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "name", "code", "organizationId", "ownerUid", "isActive", "createdAt", "updatedAt"]
+    },
+    "ScoreEvent": {
+      "title": "ScoreEvent",
+      "description": "Technical performance score awarded to personnel.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "userName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "score": {
+          "type": "number"
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "userId", "userName", "score", "organizationId", "ownerUid", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable organizational audit trail event.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorUserId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "actorName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "action": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "resourceType": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "resourceId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "actorUserId", "actorName", "action", "resourceType", "resourceId", "organizationId", "ownerUid", "createdAt"]
+    },
+    "StationCommState": {
+      "title": "StationCommState",
+      "description": "Persisted substation communication channel statuses.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "channels": {
+          "type": "array"
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["id", "channels", "organizationId", "ownerUid", "updatedAt"]
+    },
+    "PeriodicTestRecord": {
+      "title": "PeriodicTestRecord",
+      "description": "Monthly substation periodic test sheet submission supporting multi-route optical fiber inspections and test photos.",
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "domain": {
+          "type": "string",
+          "enum": ["telecom", "telemetry", "scada"]
+        },
+        "sectionId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "subSectionId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "stationId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "stationName": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "monthJalali": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "pmDateJalali": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "preparerUserId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "preparerName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "status": {
+          "type": "string",
+          "enum": ["submitted", "supervisor_approved", "expert_approved", "redo_requested"]
+        },
+        "routes": {
+          "type": "array"
+        },
+        "wirelessUnits": {
+          "type": "array"
+        },
+        "attachments": {
+          "type": "array"
+        },
+        "organizationId": {
+          "type": "string",
+          "enum": ["org-1", "org-2"]
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["_id", "domain", "sectionId", "stationId", "stationName", "monthJalali", "preparerUserId", "preparerName", "status", "routes", "organizationId", "ownerUid", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminMarker" },
+      "description": "Administrator privilege markers."
+    },
+    "/orgMembers/{uid}": {
+      "schema": { "$ref": "#/entities/OrgMember" },
+      "description": "Authenticated organizational member records."
+    },
+    "/personnel/{personnelId}": {
+      "schema": { "$ref": "#/entities/PersonnelProfile" },
+      "description": "Shared organizational personnel directory (no raw mobile PII)."
+    },
+    "/personnel/{personnelId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/PersonnelPrivateContact" },
+      "description": "Isolated PII contact details for each personnel record."
+    },
+    "/workReports/{reportId}": {
+      "schema": { "$ref": "#/entities/WorkReport" },
+      "description": "Operational work reports and daily supervisor reports."
+    },
+    "/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/TaskItem" },
+      "description": "Dispatched operational missions and tasks."
+    },
+    "/statements/{statementId}": {
+      "schema": { "$ref": "#/entities/Statement" },
+      "description": "Financial statements in 4-stage workflow."
+    },
+    "/purchases/{purchaseId}": {
+      "schema": { "$ref": "#/entities/PurchaseRequest" },
+      "description": "Material procurement requests."
+    },
+    "/priceItems/{itemId}": {
+      "schema": { "$ref": "#/entities/PriceItem" },
+      "description": "Approved tariff unit price items."
+    },
+    "/workGroups/{groupId}": {
+      "schema": { "$ref": "#/entities/WorkGroup" },
+      "description": "Operational work groups."
+    },
+    "/contracts/{contractId}": {
+      "schema": { "$ref": "#/entities/Contract" },
+      "description": "Maintenance contracts."
+    },
+    "/companies/{companyId}": {
+      "schema": { "$ref": "#/entities/Company" },
+      "description": "Contractor companies."
+    },
+    "/scoreEvents/{scoreId}": {
+      "schema": { "$ref": "#/entities/ScoreEvent" },
+      "description": "Technical performance score events."
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Organizational audit logs."
+    },
+    "/stationConfigs/{stationId}": {
+      "schema": { "$ref": "#/entities/StationCommState" },
+      "description": "Updated substation communication channel statuses."
+    },
+    "/periodicTests/{testId}": {
+      "schema": { "$ref": "#/entities/PeriodicTestRecord" },
+      "description": "Monthly periodic test sheets across telecom, telemetry, and scada groups."
+    }
+  }
+}

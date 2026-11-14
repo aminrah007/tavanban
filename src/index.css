@@ -1,0 +1,295 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'IRANSans', 'IRANSansX', 'iransans', 'Vazirmatn', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IRANSans', 'IRANSansX', 'iransans', 'Vazirmatn', monospace;
+
+  /* Modern Midnight Space Obsidian & Crisp Cool Slate Scale */
+  --color-slate-950: #050814;
+  --color-slate-900: #0B1120;
+  --color-slate-800: #131D35;
+  --color-slate-700: #233254;
+  --color-slate-600: #384C75;
+  --color-slate-500: #64748B;
+  --color-slate-400: #94A3B8;
+  --color-slate-300: #CBD5E1;
+  --color-slate-200: #E2E8F0;
+  --color-slate-100: #F1F5F9;
+  --color-slate-50:  #F8FAFC;
+
+  /* Luminous Solar Amber & Vibrant Tangerine Accents */
+  --color-amber-600: #D97706;
+  --color-amber-500: #F59E0B;
+  --color-amber-400: #FBBF24;
+  --color-amber-300: #FDE68A;
+
+  --color-orange-600: #EA580C;
+  --color-orange-500: #F97316;
+  --color-orange-400: #FB923C;
+  --color-orange-300: #FDBA74;
+  --color-orange-950: #431407;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Embed IRANSans & Vazirmatn font-face definitions */
+@font-face {
+  font-family: 'IRANSans';
+  src: local('IRANSans'), local('IRANSansX'), local('IranSans'), local('IRANSansMobile'),
+       url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IRANSans';
+  src: local('IRANSans-Medium'), local('IRANSansX-Medium'), local('IranSans-Medium'),
+       url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IRANSans';
+  src: local('IRANSans-Bold'), local('IRANSansX-Bold'), local('IranSans-Bold'),
+       url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IRANSans';
+  src: local('IRANSans-Black'), local('IRANSansX-Black'), local('IranSans-Black'),
+       url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root, html, body {
+    font-family: 'IRANSans', 'IRANSansX', 'iransans', 'Vazirmatn', system-ui, -apple-system, sans-serif !important;
+    font-feature-settings: "ss01" 1, "cv01" 1, "tnum" 1;
+    direction: rtl;
+  }
+
+  body {
+    font-family: 'IRANSans', 'IRANSansX', 'iransans', 'Vazirmatn', system-ui, -apple-system, sans-serif !important;
+    font-feature-settings: "ss01" 1, "cv01" 1, "tnum" 1;
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* Force IRANSans and Persian digits across typography elements */
+  h1, h2, h3, h4, h5, h6, p, span, a, button, input, select, textarea, div, label, td, th {
+    font-family: 'IRANSans', 'IRANSansX', 'iransans', 'Vazirmatn', system-ui, -apple-system, sans-serif !important;
+    font-feature-settings: "ss01" 1, "cv01" 1, "tnum" 1;
+  }
+
+  /* Monospace override for technical logs only, with IRANSans and Persian digit support */
+  code, pre, .font-code, .font-mono {
+    font-family: 'IRANSans', 'Vazirmatn', monospace !important;
+    font-feature-settings: "ss01" 1, "cv01" 1, "tnum" 1;
+  }
+
+  button, a, select, input[type="submit"], input[type="button"], [role="button"] {
+    cursor: pointer;
+  }
+
+  /* Sleek modern custom scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(5, 8, 20, 0.72);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.35);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(34, 211, 238, 0.6);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "ss01" 1, "cv01" 1, "tnum" 1;
+}
+
+/* Crisp Modern Glassmorphism Surfaces */
+.glass-panel {
+  background: rgba(11, 17, 32, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+/* Subtle float animation */
+@keyframes softFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-soft-float {
+  animation: softFloat 4s ease-in-out infinite;
+}
+
+.animate-soft-float-delayed {
+  animation: softFloat 4.5s ease-in-out 1.5s infinite;
+}
+
+/* =========================================================
+   Hyper-Grid Obsidian & Electric Cyan / Indigo System
+   ========================================================= */
+:root {
+  --ci-canvas: #F8FAFC;
+  --ci-surface: #FFFFFF;
+  --ci-surface-subtle: #F1F5F9;
+  --ci-surface-muted: #E2E8F0;
+  --ci-ink: #0F172A;
+  --ci-body: #334155;
+  --ci-muted: #64748B;
+  --ci-line: rgba(15, 23, 42, 0.1);
+  --ci-line-strong: rgba(15, 23, 42, 0.2);
+  --ci-accent: #4F46E5;
+  --ci-accent-hover: #4338CA;
+  --ci-accent-soft: rgba(79, 70, 229, 0.12);
+  --ci-glow: rgba(6, 182, 212, 0.22);
+}
+
+.dark {
+  --ci-canvas: #050814;
+  --ci-surface: #0B1120;
+  --ci-surface-subtle: #11182C;
+  --ci-surface-muted: #1E293B;
+  --ci-ink: #F8FAFC;
+  --ci-body: #CBD5E1;
+  --ci-muted: #94A3B8;
+  --ci-line: rgba(148, 163, 184, 0.14);
+  --ci-line-strong: rgba(56, 189, 248, 0.35);
+  --ci-accent: #22D3EE;
+  --ci-accent-hover: #38BDF8;
+  --ci-accent-soft: rgba(34, 211, 238, 0.15);
+  --ci-glow: rgba(34, 211, 238, 0.25);
+}
+
+/* Cinematic hero text reveal */
+.hero-line {
+  display: block;
+  overflow: hidden;
+  padding-block: 0.08em 0.14em;
+  margin-block: -0.08em -0.14em;
+}
+
+.hero-line__inner {
+  display: block;
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(110%) rotate(1.2deg);
+  transform-origin: right bottom;
+  animation: hero-line-in 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hero-line:nth-child(2) .hero-line__inner {
+  animation-delay: 0.12s;
+}
+
+@keyframes hero-line-in {
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) rotate(0);
+  }
+}
+
+/* Slanted highlighter stroke behind highlighted brand word */
+.hero-product {
+  position: relative;
+  z-index: 0;
+  display: inline-block;
+  isolation: isolate;
+}
+
+.hero-product::after {
+  position: absolute;
+  z-index: -1;
+  inset: auto -0.06em 0.06em;
+  height: 0.32em;
+  background: linear-gradient(90deg, #06B6D4, #6366F1, #F59E0B);
+  clip-path: polygon(1% 14%, 99% 2%, 98% 88%, 2% 100%);
+  content: "";
+  opacity: 0.78;
+  transform: scaleX(0) rotate(-1.2deg);
+  transform-origin: right center;
+  animation: highlighter-draw 0.56s cubic-bezier(0.16, 1, 0.3, 1) 0.55s forwards;
+}
+
+@keyframes highlighter-draw {
+  to {
+    transform: scaleX(1) rotate(-1.2deg);
+  }
+}
+
+/* Pulsing RTL routing indicator */
+@keyframes route-pulse-rtl {
+  50% {
+    opacity: 0.45;
+    transform: translateX(-0.18rem);
+  }
+}
+
+.route-pulse-arrow {
+  animation: route-pulse-rtl 2.2s ease-in-out infinite;
+}
+
+/* Stepped layered workflow cards */
+.ci-layer-card {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.25s ease;
+}
+
+.ci-layer-card:hover {
+  transform: translateY(-3px);
+}
+
+/* Vibrant Electric Cyan, Indigo & Solar Gold Ambient Glows */
+.omni-dark-aura {
+  background:
+    radial-gradient(56% 50% at 14% 22%, rgba(6, 182, 212, 0.22) 0%, rgba(59, 130, 246, 0.14) 44%, transparent 74%),
+    radial-gradient(52% 46% at 86% 78%, rgba(99, 102, 241, 0.22) 0%, rgba(168, 85, 247, 0.10) 48%, transparent 76%),
+    radial-gradient(38% 34% at 52% 90%, rgba(245, 158, 11, 0.10) 0%, transparent 70%);
+}
+
+.omni-light-aura {
+  background:
+    radial-gradient(54% 48% at 16% 20%, rgba(6, 182, 212, 0.14) 0%, rgba(79, 70, 229, 0.09) 46%, transparent 75%),
+    radial-gradient(48% 42% at 86% 82%, rgba(99, 102, 241, 0.12) 0%, rgba(245, 158, 11, 0.06) 55%, transparent 75%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-line__inner,
+  .hero-product::after,
+  .route-pulse-arrow,
+  .animate-soft-float,
+  .animate-soft-float-delayed {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "سامانه جامع توان‌بان (TavanBan)",
+  "description": "سامانه جامع سازمانی توان‌بان — شرکت سهامی برق منطقه‌ای سیستان و بلوچستان؛ مدیریت گزارش‌های کار، گردش کار تایید، قراردادها، صورت‌وضعیت و پایش ارتباطات پست‌ها",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

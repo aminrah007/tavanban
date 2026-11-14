@@ -1,0 +1,749 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ── Global Primitive Helpers ──────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'amintuber007@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidRole(role) {
+      return role in [
+        'DEPUTY',
+        'EMPLOYER_MANAGER',
+        'EMPLOYER_CEO',
+        'EMPLOYER_EXPERT',
+        'CONTRACTOR_CEO',
+        'RESIDENT_REP',
+        'GROUP_SUPERVISOR',
+        'TECHNICIAN'
+      ];
+    }
+
+    function isValidOrgId(orgId) {
+      return orgId in ['org-1', 'org-2'];
+    }
+
+    function isOrgMemberDoc() {
+      return isVerifiedUser() &&
+        exists(/databases/$(database)/documents/orgMembers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/orgMembers/$(request.auth.uid)).data.isActive == true;
+    }
+
+    function hasOrgReadScope(data) {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() &&
+        isValidOrgId(data.organizationId)
+      );
+    }
+
+    // ── Entity Validation Blueprints ─────────────────────────────────────────
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidOrgMember(data) {
+      return data.keys().hasAll(['uid', 'email', 'assignedRole', 'isActive', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'assignedRole', 'personnelId', 'isActive', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 120)) &&
+        isValidRole(data.assignedRole) &&
+        (!('personnelId' in data) || isValidId(data.personnelId)) &&
+        data.isActive is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPersonnel(data) {
+      return data.keys().hasAll(['_id', 'fullName', 'encryptedMobile', 'role', 'organizationId', 'isActive', 'loginCount', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['_id', 'fullName', 'encryptedMobile', 'role', 'organizationId', 'companyId', 'unitId', 'groupIds', 'isActive', 'score', 'loginCount', 'lastLoginAt', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        isValidId(data._id) &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 120 &&
+        data.encryptedMobile is string && data.encryptedMobile.size() >= 3 && data.encryptedMobile.size() <= 120 &&
+        isValidRole(data.role) &&
+        isValidOrgId(data.organizationId) &&
+        (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 64)) &&
+        (!('unitId' in data) || (data.unitId is string && data.unitId.size() <= 64)) &&
+        (!('groupIds' in data) || (data.groupIds is list && data.groupIds.size() <= 25 && (data.groupIds.size() == 0 || data.groupIds[0] is string))) &&
+        data.isActive is bool &&
+        (!('score' in data) || data.score is number) &&
+        data.loginCount is number && data.loginCount >= 0 &&
+        (!('lastLoginAt' in data) || (data.lastLoginAt is string && data.lastLoginAt.size() <= 64)) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPrivateContact(data) {
+      return data.keys().hasAll(['_id', 'mobile', 'hashedMobile', 'ownerUid', 'updatedAt']) &&
+        data.keys().hasOnly(['_id', 'mobile', 'hashedMobile', 'ownerUid', 'updatedAt']) &&
+        isValidId(data._id) &&
+        data.mobile is string && data.mobile.size() >= 8 && data.mobile.size() <= 20 &&
+        data.hashedMobile is string && data.hashedMobile.size() >= 8 && data.hashedMobile.size() <= 128 &&
+        isValidId(data.ownerUid) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidWorkReport(data) {
+      return data.keys().hasAll(['_id', 'reportType', 'userId', 'userName', 'companyId', 'contractId', 'status', 'totalAmount', 'itemCount', 'organizationId', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly([
+          '_id', 'reportType', 'userId', 'userName', 'companyId', 'companyName',
+          'groupId', 'groupName', 'contractId', 'contractTitle', 'unitId', 'unitName',
+          'stationId', 'stationName', 'dispatchCode', 'reportDateJalali', 'status',
+          'description', 'taskReferenceId', 'offlineClientId', 'idempotencyKey',
+          'submittedAt', 'currentReviewerRole', 'totalAmount', 'itemCount',
+          'organizationId', 'items', 'extraWorks', 'attachments', 'events',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data._id) &&
+        data.reportType in ['work_report', 'daily_report'] &&
+        isValidId(data.userId) &&
+        data.userName is string && data.userName.size() >= 2 && data.userName.size() <= 120 &&
+        data.companyId is string && data.companyId.size() <= 64 &&
+        data.contractId is string && data.contractId.size() <= 64 &&
+        data.status in ['draft', 'submitted', 'supervisor_review', 'expert_review', 'employer_ceo_review', 'approved', 'rejected', 'redo_requested', 'disputed', 'settled'] &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 4000)) &&
+        (!('items' in data) || (data.items is list && data.items.size() <= 100)) &&
+        (!('extraWorks' in data) || (data.extraWorks is list && data.extraWorks.size() <= 50)) &&
+        (!('attachments' in data) || (data.attachments is list && data.attachments.size() <= 20)) &&
+        (!('events' in data) || (data.events is list && data.events.size() <= 50)) &&
+        data.totalAmount is number && data.totalAmount >= 0 &&
+        data.itemCount is number && data.itemCount >= 0 &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['_id', 'title', 'createdByUserId', 'status', 'priority', 'organizationId', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly([
+          '_id', 'title', 'description', 'createdByUserId', 'createdByName',
+          'assignedUserIds', 'assignedGroupIds', 'contractId', 'groupId',
+          'stationId', 'stationName', 'dispatchCode', 'priority', 'dueDateJalali',
+          'status', 'completedAt', 'sourceRole', 'organizationId',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data._id) &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 240 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
+        isValidId(data.createdByUserId) &&
+        (!('createdByName' in data) || (data.createdByName is string && data.createdByName.size() <= 120)) &&
+        data.status in ['open', 'in_progress', 'done', 'cancelled'] &&
+        data.priority in ['low', 'medium', 'high', 'urgent'] &&
+        (!('assignedUserIds' in data) || (data.assignedUserIds is list && data.assignedUserIds.size() <= 50)) &&
+        (!('assignedGroupIds' in data) || (data.assignedGroupIds is list && data.assignedGroupIds.size() <= 25)) &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidStatement(data) {
+      return data.keys().hasAll(['_id', 'title', 'code', 'amount', 'status', 'organizationId', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly([
+          '_id', 'title', 'code', 'description', 'amount', 'contractorUserId',
+          'contractorName', 'contractorCompanyId', 'contractorCompanyName',
+          'contractId', 'contractTitle', 'periodStartJalali', 'periodEndJalali',
+          'status', 'approvedAt', 'approvedByUserId', 'approvedByName',
+          'rejectionReason', 'reportIds', 'reportsCount', 'organizationId',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data._id) &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 240 &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 64 &&
+        data.amount is number && data.amount >= 0 &&
+        data.status in ['employer_ceo_review', 'employer_manager_review', 'deputy_review', 'approved', 'rejected', 'paid', 'pending'] &&
+        (!('contractorName' in data) || (data.contractorName is string && data.contractorName.size() <= 120)) &&
+        (!('approvedByName' in data) || (data.approvedByName is string && data.approvedByName.size() <= 120)) &&
+        (!('reportIds' in data) || (data.reportIds is list && data.reportIds.size() <= 200)) &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPurchase(data) {
+      return data.keys().hasAll(['_id', 'title', 'amount', 'status', 'organizationId', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly([
+          '_id', 'title', 'description', 'amount', 'supplierCompanyId',
+          'requestedByUserId', 'requestedByName', 'approvedByUserId', 'approvedByName',
+          'status', 'priority', 'quantity', 'unit', 'groupId', 'groupName',
+          'contractId', 'companyId', 'rejectionReason', 'organizationId',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data._id) &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 240 &&
+        data.amount is number && data.amount >= 0 &&
+        data.status in ['pending', 'approved', 'rejected', 'paid', 'cancelled'] &&
+        (!('requestedByName' in data) || (data.requestedByName is string && data.requestedByName.size() <= 120)) &&
+        (!('approvedByName' in data) || (data.approvedByName is string && data.approvedByName.size() <= 120)) &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPriceItem(data) {
+      return data.keys().hasAll(['_id', 'code', 'title', 'unit', 'unitPrice', 'organizationId', 'ownerUid', 'isActive', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly([
+          '_id', 'code', 'title', 'unit', 'unitPrice', 'contractId',
+          'groupIds', 'isActive', 'category', 'organizationId',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data._id) &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 64 &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 240 &&
+        data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 64 &&
+        data.unitPrice is number && data.unitPrice >= 0 &&
+        (!('groupIds' in data) || (data.groupIds is list && data.groupIds.size() <= 25)) &&
+        data.isActive is bool &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidWorkGroup(data) {
+      return data.keys().hasAll(['_id', 'name', 'organizationId', 'ownerUid', 'isActive', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly([
+          '_id', 'name', 'description', 'specialty', 'companyId', 'contractId',
+          'organizationId', 'supervisorUserId', 'observerUserIds', 'unitId',
+          'memberIds', 'isActive', 'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data._id) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 160 &&
+        (!('specialty' in data) || data.specialty in ['telecom', 'telemetry', 'scada', 'general']) &&
+        (!('memberIds' in data) || (data.memberIds is list && data.memberIds.size() <= 100)) &&
+        (!('observerUserIds' in data) || (data.observerUserIds is list && data.observerUserIds.size() <= 25)) &&
+        data.isActive is bool &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidContract(data) {
+      return data.keys().hasAll(['_id', 'title', 'contractNumber', 'organizationId', 'ownerUid', 'isActive', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly([
+          '_id', 'title', 'contractNumber', 'employerCompanyId', 'contractorCompanyId',
+          'startDateJalali', 'endDateJalali', 'description', 'totalAmount', 'type',
+          'status', 'organizationId', 'unitId', 'isActive',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data._id) &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 240 &&
+        data.contractNumber is string && data.contractNumber.size() >= 1 && data.contractNumber.size() <= 64 &&
+        data.isActive is bool &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCompany(data) {
+      return data.keys().hasAll(['_id', 'name', 'code', 'organizationId', 'ownerUid', 'isActive', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly([
+          '_id', 'name', 'code', 'organizationId', 'contractorCeoUserId',
+          'phone', 'address', 'description', 'isActive',
+          'activeContractsCount', 'totalPersonnelCount',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data._id) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 160 &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 64 &&
+        data.isActive is bool &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidScoreEvent(data) {
+      return data.keys().hasAll(['_id', 'userId', 'userName', 'score', 'organizationId', 'ownerUid', 'createdAt']) &&
+        data.keys().hasOnly(['_id', 'userId', 'userName', 'reportId', 'score', 'reason', 'createdByRole', 'organizationId', 'ownerUid', 'createdAt']) &&
+        isValidId(data._id) &&
+        isValidId(data.userId) &&
+        data.userName is string && data.userName.size() >= 2 && data.userName.size() <= 120 &&
+        data.score is number &&
+        (!('reason' in data) || (data.reason is string && data.reason.size() <= 400)) &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['_id', 'actorUserId', 'actorName', 'action', 'resourceType', 'resourceId', 'organizationId', 'ownerUid', 'createdAt']) &&
+        data.keys().hasOnly([
+          '_id', 'actorUserId', 'actorName', 'actorRole', 'action',
+          'resourceType', 'resourceId', 'details', 'ipAddress', 'userAgent',
+          'organizationId', 'ownerUid', 'createdAt'
+        ]) &&
+        isValidId(data._id) &&
+        isValidId(data.actorUserId) &&
+        data.actorName is string && data.actorName.size() >= 2 && data.actorName.size() <= 120 &&
+        data.action is string && data.action.size() >= 1 && data.action.size() <= 120 &&
+        data.resourceType is string && data.resourceType.size() >= 1 && data.resourceType.size() <= 80 &&
+        data.resourceId is string && data.resourceId.size() >= 1 && data.resourceId.size() <= 128 &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidStationConfig(data) {
+      return data.keys().hasAll(['id', 'channels', 'organizationId', 'ownerUid', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'channels', 'organizationId', 'ownerUid', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.channels is list && data.channels.size() >= 1 && data.channels.size() <= 10 &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPeriodicTest(data) {
+      return data.keys().hasAll([
+          '_id', 'domain', 'sectionId', 'stationId', 'stationName', 'monthJalali',
+          'preparerUserId', 'preparerName', 'status', 'routes', 'organizationId',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          '_id', 'domain', 'sectionId', 'subSectionId', 'stationId', 'stationName',
+          'dispatchCode', 'groupId', 'groupName', 'monthJalali', 'pmDateJalali',
+          'documentTitle', 'documentCode', 'revisionNumber', 'contractTitle',
+          'contractNumber', 'attachmentPagesCount', 'preparerUserId', 'preparerName',
+          'approverName', 'reviewNote', 'status', 'routes', 'wirelessUnits', 'attachments',
+          'organizationId', 'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data._id) &&
+        data.domain in ['telecom', 'telemetry', 'scada'] &&
+        data.sectionId is string && data.sectionId.size() >= 1 && data.sectionId.size() <= 64 &&
+        (!('subSectionId' in data) || (data.subSectionId is string && data.subSectionId.size() <= 64)) &&
+        data.stationId is string && data.stationId.size() >= 1 && data.stationId.size() <= 128 &&
+        data.stationName is string && data.stationName.size() >= 1 && data.stationName.size() <= 160 &&
+        (!('dispatchCode' in data) || (data.dispatchCode is string && data.dispatchCode.size() <= 64)) &&
+        (!('groupId' in data) || (data.groupId is string && data.groupId.size() <= 64)) &&
+        (!('groupName' in data) || (data.groupName is string && data.groupName.size() <= 160)) &&
+        data.monthJalali is string && data.monthJalali.size() >= 1 && data.monthJalali.size() <= 64 &&
+        (!('pmDateJalali' in data) || (data.pmDateJalali is string && data.pmDateJalali.size() <= 64)) &&
+        (!('documentTitle' in data) || (data.documentTitle is string && data.documentTitle.size() <= 240)) &&
+        (!('documentCode' in data) || (data.documentCode is string && data.documentCode.size() <= 64)) &&
+        (!('revisionNumber' in data) || (data.revisionNumber is string && data.revisionNumber.size() <= 64)) &&
+        (!('contractTitle' in data) || (data.contractTitle is string && data.contractTitle.size() <= 240)) &&
+        (!('contractNumber' in data) || (data.contractNumber is string && data.contractNumber.size() <= 64)) &&
+        (!('attachmentPagesCount' in data) || (data.attachmentPagesCount is number && data.attachmentPagesCount >= 0)) &&
+        isValidId(data.preparerUserId) &&
+        data.preparerName is string && data.preparerName.size() >= 2 && data.preparerName.size() <= 120 &&
+        (!('approverName' in data) || (data.approverName is string && data.approverName.size() <= 120)) &&
+        (!('reviewNote' in data) || (data.reviewNote is string && data.reviewNote.size() <= 1000)) &&
+        data.status in ['submitted', 'supervisor_approved', 'expert_approved', 'redo_requested'] &&
+        data.routes is list && data.routes.size() <= 30 &&
+        (!('wirelessUnits' in data) || (data.wirelessUnits is list && data.wirelessUnits.size() <= 20)) &&
+        (!('attachments' in data) || (data.attachments is list && data.attachments.size() <= 15)) &&
+        isValidOrgId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // ── Collection Rules ──────────────────────────────────────────────────────
+
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && (isAdmin() || (isVerifiedUser() && request.auth.uid == uid));
+      allow list: if isBootstrappedAdmin();
+      allow create, update: if isValidId(uid) && isBootstrappedAdmin() && isValidAdmin(incoming());
+      allow delete: if false;
+    }
+
+    match /orgMembers/{uid} {
+      allow get: if isValidId(uid) && (isAdmin() || (isVerifiedUser() && request.auth.uid == uid));
+      allow list: if isBootstrappedAdmin() || (isVerifiedUser() && existing().uid == request.auth.uid);
+      allow create: if isValidId(uid) && isVerifiedUser() && isValidOrgMember(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || (incoming().assignedRole != 'DEPUTY' && incoming().assignedRole != 'EMPLOYER_MANAGER'));
+      allow update: if isValidId(uid) && isVerifiedUser() && isValidOrgMember(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            request.auth.uid == uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /personnel/{personnelId} {
+      allow get: if isValidId(personnelId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(personnelId) && isVerifiedUser() && isValidPersonnel(incoming()) &&
+        incoming()._id == personnelId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(personnelId) && isVerifiedUser() && isValidPersonnel(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'fullName', 'encryptedMobile', 'role', 'organizationId', 'companyId', 'unitId', 'groupIds', 'isActive', 'score', 'loginCount', 'lastLoginAt', 'updatedAt'
+          ])) ||
+          (isOrgMemberDoc() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'fullName', 'encryptedMobile', 'isActive', 'score', 'loginCount', 'lastLoginAt', 'updatedAt'
+          ]))
+        );
+      allow delete: if false;
+
+      match /private/{docId} {
+        allow get: if isValidId(personnelId) && isValidId(docId) && (isAdmin() || (isVerifiedUser() && existing().ownerUid == request.auth.uid));
+        allow list: if isBootstrappedAdmin() || (isVerifiedUser() && existing().ownerUid == request.auth.uid);
+        allow create: if isValidId(personnelId) && isValidId(docId) && isVerifiedUser() && isValidPrivateContact(incoming()) &&
+          incoming()._id == personnelId &&
+          incoming().ownerUid == request.auth.uid &&
+          incoming().updatedAt == request.time &&
+          exists(/databases/$(database)/documents/personnel/$(personnelId)) &&
+          (isAdmin() || isOrgMemberDoc());
+        allow update: if isValidId(personnelId) && isValidId(docId) && isVerifiedUser() && isValidPrivateContact(incoming()) &&
+          incoming()._id == existing()._id &&
+          incoming().ownerUid == existing().ownerUid &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['mobile', 'hashedMobile', 'updatedAt']) &&
+          (isAdmin() || existing().ownerUid == request.auth.uid || isOrgMemberDoc());
+        allow delete: if false;
+      }
+    }
+
+    match /workReports/{reportId} {
+      allow get: if isValidId(reportId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(reportId) && isVerifiedUser() && isValidWorkReport(incoming()) &&
+        incoming()._id == reportId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(reportId) && isVerifiedUser() && isValidWorkReport(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOrgMemberDoc() &&
+            existing().status != 'settled' &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'userName', 'status', 'description', 'currentReviewerRole',
+              'totalAmount', 'itemCount', 'items', 'extraWorks', 'events', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /tasks/{taskId} {
+      allow get: if isValidId(taskId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(taskId) && isVerifiedUser() && isValidTask(incoming()) &&
+        incoming()._id == taskId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(taskId) && isVerifiedUser() && isValidTask(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOrgMemberDoc() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'createdByName', 'status', 'completedAt', 'assignedUserIds', 'assignedGroupIds', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /statements/{statementId} {
+      allow get: if isValidId(statementId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(statementId) && isVerifiedUser() && isValidStatement(incoming()) &&
+        incoming()._id == statementId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(statementId) && isVerifiedUser() && isValidStatement(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOrgMemberDoc() &&
+            existing().status != 'paid' &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'contractorName', 'status', 'approvedAt', 'approvedByUserId', 'approvedByName', 'rejectionReason', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /purchases/{purchaseId} {
+      allow get: if isValidId(purchaseId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(purchaseId) && isVerifiedUser() && isValidPurchase(incoming()) &&
+        incoming()._id == purchaseId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(purchaseId) && isVerifiedUser() && isValidPurchase(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOrgMemberDoc() &&
+            existing().status != 'paid' &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'requestedByName', 'status', 'approvedByUserId', 'approvedByName', 'rejectionReason', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /priceItems/{itemId} {
+      allow get: if isValidId(itemId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(itemId) && isVerifiedUser() && isValidPriceItem(incoming()) &&
+        incoming()._id == itemId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(itemId) && isVerifiedUser() && isValidPriceItem(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOrgMemberDoc() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'unit', 'unitPrice', 'groupIds', 'isActive', 'category', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /workGroups/{groupId} {
+      allow get: if isValidId(groupId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(groupId) && isVerifiedUser() && isValidWorkGroup(incoming()) &&
+        incoming()._id == groupId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(groupId) && isVerifiedUser() && isValidWorkGroup(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOrgMemberDoc() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'description', 'specialty', 'supervisorUserId', 'observerUserIds', 'memberIds', 'isActive', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /contracts/{contractId} {
+      allow get: if isValidId(contractId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(contractId) && isVerifiedUser() && isValidContract(incoming()) &&
+        incoming()._id == contractId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(contractId) && isVerifiedUser() && isValidContract(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOrgMemberDoc() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'description', 'totalAmount', 'status', 'isActive', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /companies/{companyId} {
+      allow get: if isValidId(companyId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(companyId) && isVerifiedUser() && isValidCompany(incoming()) &&
+        incoming()._id == companyId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(companyId) && isVerifiedUser() && isValidCompany(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOrgMemberDoc() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'phone', 'address', 'description', 'isActive', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /scoreEvents/{scoreId} {
+      allow get: if isValidId(scoreId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(scoreId) && isVerifiedUser() && isValidScoreEvent(incoming()) &&
+        incoming()._id == scoreId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(scoreId) && isVerifiedUser() && isValidScoreEvent(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        (isAdmin() || isOrgMemberDoc()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['userName']);
+      allow delete: if false;
+    }
+
+    match /auditLogs/{logId} {
+      allow get: if isValidId(logId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(logId) && isVerifiedUser() && isValidAuditLog(incoming()) &&
+        incoming()._id == logId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(logId) && isVerifiedUser() && isValidAuditLog(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        isAdmin() &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['actorName']);
+      allow delete: if false;
+    }
+
+    match /stationConfigs/{stationId} {
+      allow get: if isValidId(stationId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(stationId) && isVerifiedUser() && isValidStationConfig(incoming()) &&
+        incoming().id == stationId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(stationId) && isVerifiedUser() && isValidStationConfig(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['channels', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /periodicTests/{testId} {
+      allow get: if isValidId(testId) && (isAdmin() || isOrgMemberDoc());
+      allow list: if hasOrgReadScope(existing());
+      allow create: if isValidId(testId) && isVerifiedUser() && isValidPeriodicTest(incoming()) &&
+        incoming()._id == testId &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || isOrgMemberDoc());
+      allow update: if isValidId(testId) && isVerifiedUser() && isValidPeriodicTest(incoming()) &&
+        incoming()._id == existing()._id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOrgMemberDoc() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'status', 'approverName', 'reviewNote', 'routes', 'attachments',
+              'attachmentPagesCount', 'monthJalali', 'pmDateJalali', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+  }
+}
